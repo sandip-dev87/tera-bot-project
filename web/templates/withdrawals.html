@@ -11,22 +11,42 @@
 
 {% for w in withdrawals %}
 <div class="bg-white p-4 rounded shadow mb-3">
-    <div class="font-bold">#{{ w[0] }} | {{ w[1] }}</div>
-    <div class="text-sm text-gray-600">Amount: ₹{{ "%.0f"|format(w[2]) }} | Fee: ₹{{ "%.0f"|format(w[3]) }} | Total: ₹{{ "%.0f"|format(w[6]) }}</div>
-    <div class="text-sm text-gray-600">Method: {{ w[7] }}</div>
-    {% if w[7] == 'crypto' %}
-    <div class="text-sm">Wallet: {{ w[8] }}</div>
-    {% elif w[7] == 'upi' %}
-    <div class="text-sm">UPI: {{ w[9] }} | Holder: {{ w[10] }}</div>
-    {% else %}
-    <div class="text-sm">Bank: {{ w[11] }} | Acc: {{ w[12] }} | IFSC: {{ w[13] }}</div>
-    {% endif %}
-    <div class="text-sm">Status: <b>{{ w[14] }}</b></div>
+    <div class="flex justify-between items-start">
+        <div>
+            <div class="font-bold text-lg">#{{ w[0] }} - {{ w[1] }}</div>
+            <div class="text-sm text-gray-600">Amount: <b>₹{{ "%.0f"|format(w[2]) }}</b> | Fee: ₹{{ "%.0f"|format(w[3]) }} | Total: ₹{{ "%.0f"|format(w[6]) }}</div>
+            <div class="text-sm mt-1">Method: <span class="bg-gray-200 px-2 py-0.5 rounded">{{ w[7] }}</span></div>
+            
+            {% if w[7] == 'crypto' %}
+            <div class="mt-2 p-2 bg-yellow-50 rounded text-sm">
+                <div class="font-bold">🪙 Crypto Wallet:</div>
+                <div class="break-all">{{ w[8] or 'N/A' }}</div>
+            </div>
+            {% elif w[7] == 'upi' %}
+            <div class="mt-2 p-2 bg-blue-50 rounded text-sm">
+                <div class="font-bold">📱 UPI Details:</div>
+                <div>UPI ID: <b>{{ w[9] or 'N/A' }}</b></div>
+                <div>Banking Name: <b>{{ w[10] or 'N/A' }}</b></div>
+            </div>
+            {% elif w[7] == 'bank' %}
+            <div class="mt-2 p-2 bg-green-50 rounded text-sm">
+                <div class="font-bold">🏦 Bank Details:</div>
+                <div>Account No: <b>{{ w[11] or 'N/A' }}</b></div>
+                <div>IFSC: <b>{{ w[12] or 'N/A' }}</b></div>
+                <div>Holder: <b>{{ w[10] or 'N/A' }}</b></div>
+            </div>
+            {% endif %}
+            
+            <div class="text-sm mt-2">Status: <b class="{% if w[14]=='approved' %}text-green-600{% elif w[14]=='rejected' %}text-red-600{% else %}text-yellow-600{% endif %}">{{ w[14] }}</b></div>
+            {% if w[15] %}<div class="text-sm text-gray-600">Note: {{ w[15] }}</div>{% endif %}
+            <div class="text-xs text-gray-500 mt-1">{{ w[16] }}</div>
+        </div>
+    </div>
     
     {% if w[14] == 'pending' %}
-    <div class="flex gap-2 mt-2">
+    <div class="flex gap-2 mt-3">
         <form method="post" action="/withdrawals/{{ w[0] }}/approve" class="flex gap-1">
-            <input type="text" name="note" placeholder="Note" class="p-1 border rounded text-sm w-32">
+            <input type="text" name="note" placeholder="Note (optional)" class="p-1 border rounded text-sm w-32">
             <button class="bg-green-600 text-white px-3 py-1 rounded text-sm">✅ Approve</button>
         </form>
         <form method="post" action="/withdrawals/{{ w[0] }}/reject" class="flex gap-1">

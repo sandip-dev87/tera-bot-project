@@ -55,13 +55,54 @@ async def withdraw_amount(msg: Message, state: FSMContext):
 async def withdraw_details(msg: Message, state: FSMContext):
     data = await state.get_data()
     details = msg.text.strip()
-    await state.update_data(details=details)
     method = data["method"]
-    if method == "upi" and "holder_done" not in data:
-        await state.update_data(holder_done=True)
-        await msg.answer("📱 Account holder name bhejo:")
+    
+    # Crypto - single step
+    if method == "crypto":
+        await execute(
+            "INSERT INTO withdrawals (user_acc, amount, processing_fee, total_deducted, method, wallet_address, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')",
+            [data["acc_no"], data["amount"], data["fee"], data["total"], method, details]
+        )
+        await execute("UPDATE users SET balance = balance - ? WHERE acc_no = ?", [data["total"], data["acc_no"]])
+        await state.clear()
+        await msg.answer(f"✅ Withdrawal Request Submit!\n\nAmount: ₹{data['amount']:.0f}\nFee: ₹{data['fee']:.0f}\nTotal Deduct: ₹{data['total']:.0f}\n\nAdmin approve karega.")
         return
-    await execute("INSERT INTO withdrawals (user_acc, amount, processing_fee, total_deducted, method, wallet_address, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')", [data["acc_no"], data["amount"], data["fee"], data["total"], method, details])
-    await execute("UPDATE users SET balance = balance - ? WHERE acc_no = ?", [data["total"], data["acc_no"]])
-    await state.clear()
-    await msg.answer(f"✅ Withdrawal Request Submit!\n\nAmount: ₹{data['amount']:.0f}\nFee: ₹{data['fee']:.0f}\nTotal Deduct: ₹{data['total']:.0f}\n\nAdmin approve karega.")
+    
+    # UPI - 2 step (UPI ID, phir holder name)
+    if method == "upi":
+        if "upi_id" not in data:
+            await state.update_data(upi_id=details)
+            await msg.answer("📱 Account holder name (banking name) bhejo:")
+            return
+        else:
+            upi_id = data["upi_id"]
+            holder = details
+            await execute(
+                "INSERT INTO withdrawals (user_acc, amount, processing_fee, total_deducted, method, upi_id, account_holder, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')",
+                [data["acc_no"], data["amount"], data["fee"], data["total"], method, upi_id, holder]
+            )
+            await execute("UPDATE users SET balance = balance - ? WHERE acc_no = ?", [data["total"], data["acc_no"]])
+            await state.clear()
+            await msg.answer(f"✅ Withdrawal Request Submit!\n\nAmount: ₹{data['amount']:.0f}\nFee: ₹{data['fee']:.0f}\nTotal Deduct: ₹{data['total']:.0f}\n\nAdmin approve karega.")
+            return
+    
+    # Bank - 3 step (account no, IFSC, holder name)
+    if method == "bank":
+        if "account_no" not in data:
+            await state.update_data(account_no=details)
+            await msg.answer("🏦 IFSC code bhejo:")
+            return
+        elif "ifsc" not in data:
+            await state.update_data(ifsc=details)
+            await msg.answer("🏦 Account holder name bhejo:")
+            return
+        else:
+            holder = details
+            await execute(
+                "INSERT INTO withdrawals (user_acc, amount, processing_fee, total_deducted, method, account_no, ifsc, account_holder, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')",
+                [data["acc_no"], data["amount"], data["fee"], data["total"], method, data["account_no"], data["ifsc"], holder]
+            )
+            await execute("UPDATE users SET balance = balance - ? WHERE acc_no = ?", [data["total"], data["acc_no"]])
+            await state.clear()
+            await msg.answer(f"✅ Withdrawal Request Submitted!\n\nAmount: ₹{data['amount']:.0f}\nFee: ₹{data['fee']:.0f}\nTotal: ₹{data['total']:.0f}\n\nAdmin approve karega.")
+            return
