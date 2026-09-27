@@ -6,6 +6,7 @@ from bot.config import ORDER_CHANNEL_ID
 from shared.db import fetch_one, fetch_all, execute
 from shared.settings import get_order_timeout, get_browser_message, is_membership_required
 from bot.keyboards.main_menu import membership_button
+import json
 
 router = Router()
 
@@ -72,18 +73,36 @@ async def order_withdrawal(msg: Message, state: FSMContext):
         await msg.answer("❌ Number bhejo:")
         return
     await state.update_data(withdrawal=amt)
-    await msg.answer("📸 Proof bhejo (photo):")
-    await state.set_state(OrderFlow.proof)
+    await msg.answer(
+        "📸 3 Photos bhejo ek-ek karke:\n\n"
+        "1️⃣ Deposit proof\n"
+        "2️⃣ Withdrawal proof\n"
+        "3️⃣ Game statistics proof\n\n"
+        "Pehli photo bhejo (Deposit):"
+    )
+    await state.set_state(OrderFlow.proof1)
 
-@router.message(OrderFlow.proof, F.photo)
-async def order_proof(msg: Message, state: FSMContext):
+@router.message(OrderFlow.proof1, F.photo)
+async def order_proof1(msg: Message, state: FSMContext):
+    await state.update_data(proof1=msg.photo[-1].file_id)
+    await msg.answer("✅ Pehli photo mil gayi.\n\nDusri photo bhejo (Withdrawal):")
+    await state.set_state(OrderFlow.proof2)
+
+@router.message(OrderFlow.proof2, F.photo)
+async def order_proof2(msg: Message, state: FSMContext):
+    await state.update_data(proof2=msg.photo[-1].file_id)
+    await msg.answer("✅ Dusri photo mil gayi.\n\nTeesri photo bhejo (Game statistics):")
+    await state.set_state(OrderFlow.proof3)
+
+@router.message(OrderFlow.proof3, F.photo)
+async def order_proof3(msg: Message, state: FSMContext):
+    await state.update_data(proof3=msg.photo[-1].file_id)
     data = await state.get_data()
-    file_id = msg.photo[-1].file_id
+    
     timeout = await get_order_timeout()
     user = await fetch_one("SELECT acc_no FROM users WHERE tg_id = ?", [msg.from_user.id])
     acc_no = user[0]
     
-    # Order banane se pehle channel mein bhej
     caption = (
         f"📦 Order Proof\n"
         f"👤 User: {acc_no}\n"
@@ -91,20 +110,27 @@ async def order_proof(msg: Message, state: FSMContext):
         f"📋 Structure: {data['deposit_structure']}\n"
         f"🔗 URL: {data['url']}\n"
         f"🔢 UID: {data['uid']}\n"
-        f"💸 Withdrawal: ₹{data['withdrawal']:.0f}\n"
-        f"⏰ {msg.date}"
+        f"💸 Withdrawal: ₹{data['withdrawal']:.0f}"
     )
     
+    media = [
+        InputMediaPhoto(media=data["proof1"], caption=caption),
+        InputMediaPhoto(media=data["proof2"]),
+        InputMediaPhoto(media=data["proof3"]),
+    ]
+    
+    proof_msg_id = None
     try:
-        sent = await msg.bot.send_photo(ORDER_CHANNEL_ID, file_id, caption=caption)
-        proof_msg_id = sent.message_id
+        sent = await msg.bot.send_media_group(ORDER_CHANNEL_ID, media)
+        proof_msg_id = sent[0].message_id
     except Exception as e:
         print(f"Channel send error: {e}")
-        proof_msg_id = None
+    
+    proof_file_ids = json.dumps([data["proof1"], data["proof2"], data["proof3"]])
     
     await execute(
-        "INSERT INTO orders (user_acc, url_id, deposit_amount_id, deposit_amount, deposit_structure, working_url, uid, withdrawal_amount, proof_file_ids, proof_message_id, proof_type, status, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'photo', 'created', DATETIME('now', '+' || ? || ' minutes'))",
-        [acc_no, data["url_id"], data["deposit_id"], data["deposit_amount"], data["deposit_structure"], data["url"], data["uid"], data["withdrawal"], file_id, proof_msg_id, timeout]
+        "INSERT INTO orders (user_acc, url_id, deposit_amount_id, deposit_amount, deposit_structure, working_url, uid, withdrawal_amount, proof_file_ids, proof_message_id, proof_caption, proof_type, status, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'photo', 'created', DATETIME('now', '+' || ? || ' minutes'))",
+        [acc_no, data["url_id"], data["deposit_id"], data["deposit_amount"], data["deposit_structure"], data["url"], data["uid"], data["withdrawal"], proof_file_ids, proof_msg_id, caption, timeout]
     )
     order = await fetch_one("SELECT last_insert_rowid()")
     order_id = order[0]

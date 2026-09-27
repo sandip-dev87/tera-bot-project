@@ -19,7 +19,9 @@ class OrderFlow(StatesGroup):
     choose_amount = State()
     uid = State()
     withdrawal = State()
-    proof = State()
+    proof1 = State()
+    proof2 = State()
+    proof3 = State()
 
 class WithdrawFlow(StatesGroup):
     method = State()
