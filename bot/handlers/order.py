@@ -24,10 +24,21 @@ async def start_order(msg: Message, state: FSMContext):
     if await is_membership_required() and not mem_active:
         await msg.answer("❌ Order ke liye membership zaruri hai.\n\nPehle membership lo:", reply_markup=membership_button())
         return
-    urls = await fetch_all("SELECT id FROM working_urls WHERE is_active = 1 ORDER BY id")
+
+    urls = await fetch_all(
+        """SELECT DISTINCT wu.id 
+           FROM working_urls wu
+           JOIN deposit_amounts da ON da.url_id = wu.id
+           WHERE wu.is_active = 1 
+             AND da.is_active = 1 
+             AND da.used_count < da.max_limit
+           ORDER BY wu.id""",
+        []
+    )
     if not urls:
-        await msg.answer("❌ Abhi koi URL available nahi hai.")
+        await msg.answer("❌ Abhi koi URL available nahi hai (sab limit cross).")
         return
+
     url_ids = [u[0] for u in urls]
     last = await fetch_one("SELECT last_url_id FROM url_rotation WHERE user_acc = ?", [acc_no])
     if not last or last[0] is None:
@@ -39,22 +50,31 @@ async def start_order(msg: Message, state: FSMContext):
             next_id = url_ids[(idx + 1) % len(url_ids)]
         else:
             next_id = url_ids[0]
-    await execute("INSERT INTO url_rotation (user_acc, last_url_id) VALUES (?, ?) ON CONFLICT(user_acc) DO UPDATE SET last_url_id = ?", [acc_no, next_id, next_id])
+
+    await execute(
+        "INSERT INTO url_rotation (user_acc, last_url_id) VALUES (?, ?) ON CONFLICT(user_acc) DO UPDATE SET last_url_id = ?",
+        [acc_no, next_id, next_id]
+    )
+
     url_row = await fetch_one("SELECT url FROM working_urls WHERE id = ?", [next_id])
     url = url_row[0]
+
     amounts = await fetch_all(
         "SELECT id, amount, deposit_structure FROM deposit_amounts WHERE url_id = ? AND is_active = 1 AND used_count < max_limit ORDER BY amount",
         [next_id]
     )
-    if not amounts:
-        await msg.answer("❌ Is URL pe abhi koi deposit available nahi (sab limit cross).")
-        return
+
     await state.update_data(url_id=next_id, url=url)
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=f"₹{a[1]:.0f} — {a[2]}", callback_data=f"dep_{a[0]}")]
         for a in amounts
     ])
-    await msg.answer(f"📦 Order Create\n\n🔗 Working URL:\n<code>{url}</code>\n\nDeposit amount choose karo:", reply_markup=kb, parse_mode="HTML")
+    await msg.answer(
+        f"📦 Order Create\n\n🔗 Working URL:\n<code>{url}</code>\n\nDeposit amount choose karo:",
+        reply_markup=kb,
+        parse_mode="HTML"
+    )
+
 
 @router.callback_query(F.data.startswith("dep_"))
 async def choose_deposit(cb: CallbackQuery, state: FSMContext):
@@ -63,14 +83,19 @@ async def choose_deposit(cb: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     browser_msg = await get_browser_message()
     await state.update_data(deposit_id=dep_id, deposit_amount=dep[0], deposit_structure=dep[1])
-    await cb.message.edit_text(f"✅ Deposit Selected: ₹{dep[0]:.0f}\n📋 Structure: {dep[1]}\n\n🔗 Working URL:\n<code>{data['url']}</code>\n\n📋 URL copy karne ke liye tap karo\n\n🌐 Ab {browser_msg}\nAur deposit karo.\n\nUID bhejo:", parse_mode="HTML")
+    await cb.message.edit_text(
+        f"✅ Deposit Selected: ₹{dep[0]:.0f}\n📋 Structure: {dep[1]}\n\n🔗 Working URL:\n<code>{data['url']}</code>\n\n📋 URL copy karne ke liye tap karo\n\n🌐 Ab {browser_msg}\nAur deposit karo.\n\nUID bhejo:",
+        parse_mode="HTML"
+    )
     await state.set_state(OrderFlow.uid)
+
 
 @router.message(OrderFlow.uid)
 async def order_uid(msg: Message, state: FSMContext):
     await state.update_data(uid=msg.text.strip())
     await msg.answer("💸 Withdrawal amount bhejo:")
     await state.set_state(OrderFlow.withdrawal)
+
 
 @router.message(OrderFlow.withdrawal)
 async def order_withdrawal(msg: Message, state: FSMContext):
@@ -80,13 +105,12 @@ async def order_withdrawal(msg: Message, state: FSMContext):
         await msg.answer("❌ Number bhejo:")
         return
     await state.update_data(withdrawal=amt)
-    
-    # ====== ORDER PEHLE CREATE KARO (status: created) ======
+
     data = await state.get_data()
     timeout = await get_order_timeout()
     user = await fetch_one("SELECT acc_no FROM users WHERE tg_id = ?", [msg.from_user.id])
     acc_no = user[0]
-    
+
     await execute(
         "INSERT INTO orders (user_acc, url_id, deposit_amount_id, deposit_amount, deposit_structure, working_url, uid, withdrawal_amount, status, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'created', DATETIME('now', '+' || ? || ' minutes'))",
         [acc_no, data["url_id"], data["deposit_id"], data["deposit_amount"], data["deposit_structure"], data["url"], data["uid"], data["withdrawal"], timeout]
@@ -94,7 +118,7 @@ async def order_withdrawal(msg: Message, state: FSMContext):
     order = await fetch_one("SELECT last_insert_rowid()")
     order_id = order[0]
     await state.update_data(order_id=order_id)
-    
+
     await msg.answer(
         f"✅ Order #{order_id} Create!\n\n"
         f"⏰ Ab tumhare paas {timeout} minute hain proof submit karne ke liye.\n\n"
@@ -132,21 +156,19 @@ async def save_proof(msg: Message, state: FSMContext, file_ids: list):
     order_id = data.get("order_id")
     user = await fetch_one("SELECT acc_no FROM users WHERE tg_id = ?", [msg.from_user.id])
     acc_no = user[0]
-    
-    # Check karo order abhi bhi 'created' hai? (timeout nahi hua?)
+
     order = await fetch_one("SELECT status, deposit_amount, deposit_structure, working_url, uid, withdrawal_amount FROM orders WHERE id = ?", [order_id])
     if not order:
         await msg.answer("❌ Order nahi mila.")
         return
-    
+
     status, deposit_amount, deposit_structure, working_url, uid, withdrawal_amount = order
-    
+
     if status != "created":
         await msg.answer(f"❌ Order #{order_id} ab valid nahi hai (status: {status}). Naya order karo.")
         await state.clear()
         return
-    
-    # Caption banao
+
     caption = (
         f"📦 Order #{order_id}\n"
         f"👤 User: {acc_no}\n"
@@ -156,12 +178,11 @@ async def save_proof(msg: Message, state: FSMContext, file_ids: list):
         f"🔢 UID: {uid}\n"
         f"💸 Withdrawal: ₹{withdrawal_amount:.0f}"
     )
-    
-    # Channel mein album bhejo
+
     proof_msg_id = None
     try:
         if len(file_ids) >= 2:
-            media = [InputMediaPhoto(media=fid, caption=caption if i == 0 else None) 
+            media = [InputMediaPhoto(media=fid, caption=caption if i == 0 else None)
                      for i, fid in enumerate(file_ids)]
             sent = await msg.bot.send_media_group(ORDER_CHANNEL_ID, media)
             proof_msg_id = sent[0].message_id
@@ -170,15 +191,13 @@ async def save_proof(msg: Message, state: FSMContext, file_ids: list):
             proof_msg_id = sent.message_id
     except Exception as e:
         print(f"Channel send error: {e}")
-    
-    # Order update: under_processing
+
     await execute(
         "UPDATE orders SET status = 'under_processing', proof_file_ids = ?, proof_message_id = ?, proof_caption = ?, proof_type = 'photo' WHERE id = ?",
         [json.dumps(file_ids), proof_msg_id, caption, order_id]
     )
-    
-    # used_count +1
+
     await execute("UPDATE deposit_amounts SET used_count = used_count + 1 WHERE id = ?", [data["deposit_id"]])
-    
+
     await state.clear()
     await msg.answer(f"✅ Proof Submit Ho Gaya!\n\n📦 Order ID: #{order_id}\nStatus: Under Processing\n\nAdmin verify karega.")
