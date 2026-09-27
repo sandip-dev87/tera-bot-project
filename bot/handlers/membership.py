@@ -6,17 +6,34 @@ from shared.db import fetch_one, fetch_all, execute
 
 router = Router()
 
-@router.message(F.text == "/membership")
-async def show_plans(msg: Message, state: FSMContext):
+
+async def show_membership_plans(target, state: FSMContext):
     plans = await fetch_all("SELECT id, name, price, duration_days FROM membership_plans WHERE is_active = 1")
     if not plans:
-        await msg.answer("❌ Abhi koi plan available nahi.")
+        await target.answer("❌ Abhi koi plan available nahi.")
         return
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=f"{p[1]} — ₹{p[2]:.0f} ({p[3]} din)", callback_data=f"plan_{p[0]}")]
         for p in plans
     ])
-    await msg.answer("🎫 Membership Plans:\n\nChoose karo:", reply_markup=kb)
+    await target.answer("🎫 Membership Plans:\n\nChoose karo:", reply_markup=kb)
+
+
+@router.message(F.text == "/membership")
+async def cmd_membership(msg: Message, state: FSMContext):
+    await show_membership_plans(msg, state)
+
+
+@router.message(F.text == "🎫 Membership")
+async def menu_membership(msg: Message, state: FSMContext):
+    await show_membership_plans(msg, state)
+
+
+@router.callback_query(F.data == "show_plans")
+async def cb_show_plans(cb: CallbackQuery, state: FSMContext):
+    await cb.message.delete()
+    await show_membership_plans(cb.message, state)
+
 
 @router.callback_query(F.data.startswith("plan_"))
 async def choose_plan(cb: CallbackQuery, state: FSMContext):
@@ -31,11 +48,13 @@ async def choose_plan(cb: CallbackQuery, state: FSMContext):
     await cb.message.answer("UTR bhejo:")
     await state.set_state(MembershipFlow.utr)
 
+
 @router.message(MembershipFlow.utr)
 async def membership_utr(msg: Message, state: FSMContext):
     await state.update_data(utr=msg.text.strip())
     await msg.answer("📸 Payment screenshot bhejo:")
     await state.set_state(MembershipFlow.proof)
+
 
 @router.message(MembershipFlow.proof, F.photo)
 async def membership_proof(msg: Message, state: FSMContext):

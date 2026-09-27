@@ -5,7 +5,7 @@ def main_menu():
         keyboard=[
             [KeyboardButton(text="📦 Order"), KeyboardButton(text="💸 Withdraw")],
             [KeyboardButton(text="💰 Balance"), KeyboardButton(text="👥 Referral")],
-            [KeyboardButton(text="👤 Profile")],
+            [KeyboardButton(text="🎫 Membership"), KeyboardButton(text="👤 Profile")],
         ],
         resize_keyboard=True
     )
@@ -15,5 +15,12 @@ def start_menu():
         inline_keyboard=[
             [InlineKeyboardButton(text="📝 New Registration", callback_data="register")],
             [InlineKeyboardButton(text="🔐 Login", callback_data="login")],
+        ]
+    )
+
+def membership_button():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🎫 Membership Lo", callback_data="show_plans")],
         ]
     )

@@ -14,8 +14,12 @@ async def start_order(msg: Message, state: FSMContext):
         await msg.answer("Pehle register karo /start")
         return
     acc_no, mem_active = user
-    if await is_membership_required() and not mem_active:
-        await msg.answer("❌ Order ke liye membership zaruri hai.\n\nMembership lo.")
+        if await is_membership_required() and not mem_active:
+        from bot.keyboards.main_menu import membership_button
+        await msg.answer(
+            "❌ Order ke liye membership zaruri hai.\n\nPehle membership lo:",
+            reply_markup=membership_button()
+        )
         return
     urls = await fetch_all("SELECT id FROM working_urls WHERE is_active = 1 ORDER BY id")
     if not urls:
