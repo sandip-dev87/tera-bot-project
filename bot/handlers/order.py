@@ -7,8 +7,13 @@ from shared.db import fetch_one, fetch_all, execute
 from shared.settings import get_order_timeout, get_browser_message, is_membership_required
 from bot.keyboards.main_menu import membership_button
 import json
+import asyncio
 
 router = Router()
+
+# Media group cache (memory mein)
+media_cache = {}
+
 
 @router.message(F.text == "📦 Order")
 async def start_order(msg: Message, state: FSMContext):
@@ -74,31 +79,51 @@ async def order_withdrawal(msg: Message, state: FSMContext):
         return
     await state.update_data(withdrawal=amt)
     await msg.answer(
-        "📸 3 Photos bhejo ek-ek karke:\n\n"
+        "📸 3 Photos ek saath bhejo (album):\n\n"
         "1️⃣ Deposit proof\n"
         "2️⃣ Withdrawal proof\n"
         "3️⃣ Game statistics proof\n\n"
-        "Pehli photo bhejo (Deposit):"
+        "Teeno select karke ek saath bhejo."
     )
     await state.set_state(OrderFlow.proof1)
 
+
 @router.message(OrderFlow.proof1, F.photo)
-async def order_proof1(msg: Message, state: FSMContext):
-    await state.update_data(proof1=msg.photo[-1].file_id)
-    await msg.answer("✅ Pehli photo mil gayi.\n\nDusri photo bhejo (Withdrawal):")
-    await state.set_state(OrderFlow.proof2)
-
-@router.message(OrderFlow.proof2, F.photo)
-async def order_proof2(msg: Message, state: FSMContext):
-    await state.update_data(proof2=msg.photo[-1].file_id)
-    await msg.answer("✅ Dusri photo mil gayi.\n\nTeesri photo bhejo (Game statistics):")
-    await state.set_state(OrderFlow.proof3)
-
-@router.message(OrderFlow.proof3, F.photo)
-async def order_proof3(msg: Message, state: FSMContext):
-    await state.update_data(proof3=msg.photo[-1].file_id)
-    data = await state.get_data()
+async def order_proofs(msg: Message, state: FSMContext):
+    """Photos collect karo - album ya single"""
     
+    if msg.media_group_id:
+        # Album hai - cache mein add karo
+        gid = msg.media_group_id
+        
+        if gid not in media_cache:
+            media_cache[gid] = {
+                "file_ids": [],
+                "user_id": msg.from_user.id,
+                "timer": None
+            }
+        
+        media_cache[gid]["file_ids"].append(msg.photo[-1].file_id)
+        
+        # Pehla photo aaya - 3 sec baad process karo
+        if len(media_cache[gid]["file_ids"]) == 1:
+            async def process_album(gid=gid, msg=msg, state=state):
+                await asyncio.sleep(3)
+                if gid not in media_cache:
+                    return
+                cache = media_cache.pop(gid)
+                file_ids = cache["file_ids"]
+                await save_order_with_photos(msg, state, file_ids)
+            
+            media_cache[gid]["timer"] = asyncio.create_task(process_album())
+    else:
+        # Single photo
+        await save_order_with_photos(msg, state, [msg.photo[-1].file_id])
+
+
+async def save_order_with_photos(msg: Message, state: FSMContext, file_ids: list):
+    """Order save karo photos ke saath"""
+    data = await state.get_data()
     timeout = await get_order_timeout()
     user = await fetch_one("SELECT acc_no FROM users WHERE tg_id = ?", [msg.from_user.id])
     acc_no = user[0]
@@ -113,20 +138,21 @@ async def order_proof3(msg: Message, state: FSMContext):
         f"💸 Withdrawal: ₹{data['withdrawal']:.0f}"
     )
     
-    media = [
-        InputMediaPhoto(media=data["proof1"], caption=caption),
-        InputMediaPhoto(media=data["proof2"]),
-        InputMediaPhoto(media=data["proof3"]),
-    ]
-    
+    # Channel mein album bhejo (agar 2+ photos hain)
     proof_msg_id = None
     try:
-        sent = await msg.bot.send_media_group(ORDER_CHANNEL_ID, media)
-        proof_msg_id = sent[0].message_id
+        if len(file_ids) >= 2:
+            media = [InputMediaPhoto(media=fid, caption=caption if i == 0 else None) 
+                     for i, fid in enumerate(file_ids)]
+            sent = await msg.bot.send_media_group(ORDER_CHANNEL_ID, media)
+            proof_msg_id = sent[0].message_id
+        else:
+            sent = await msg.bot.send_photo(ORDER_CHANNEL_ID, file_ids[0], caption=caption)
+            proof_msg_id = sent.message_id
     except Exception as e:
         print(f"Channel send error: {e}")
     
-    proof_file_ids = json.dumps([data["proof1"], data["proof2"], data["proof3"]])
+    proof_file_ids = json.dumps(file_ids)
     
     await execute(
         "INSERT INTO orders (user_acc, url_id, deposit_amount_id, deposit_amount, deposit_structure, working_url, uid, withdrawal_amount, proof_file_ids, proof_message_id, proof_caption, proof_type, status, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'photo', 'created', DATETIME('now', '+' || ? || ' minutes'))",
@@ -135,4 +161,4 @@ async def order_proof3(msg: Message, state: FSMContext):
     order = await fetch_one("SELECT last_insert_rowid()")
     order_id = order[0]
     await state.clear()
-    await msg.answer(f"✅ Order Submit Ho Gaya!\n\n📦 Order ID: #{order_id}\nStatus: Under Processing\n\nAdmin verify karega. {timeout} min tak wait karo.")
+    await msg.answer(f"✅ Order Submit Ho Gaya!\n\n📦 Order ID: #{order_id}\nPhotos: {len(file_ids)}\nStatus: Under Processing\n\nAdmin verify karega. {timeout} min tak wait karo.")
