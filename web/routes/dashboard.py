@@ -31,7 +31,7 @@ async def dashboard(request: Request):
     membership_revenue = await fetch_one("SELECT COALESCE(SUM(amount), 0) FROM memberships WHERE status = 'approved'")
     membership_pending = await fetch_one("SELECT COUNT(*) FROM memberships WHERE status = 'pending'")
     
-    return templates.TemplateResponse("dashboard.html", {
+    return templates.TemplateResponse(request, "dashboard.html", {
         "request": request,
         "admin": request.session.get("admin"),
         "total_users": total_users[0],

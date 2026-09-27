@@ -18,8 +18,7 @@ async def orders_list(request: Request, status: str = "all"):
     else:
         orders = await fetch_all("SELECT * FROM orders WHERE status = ? ORDER BY id DESC LIMIT 100", [status])
     
-    return templates.TemplateResponse("orders.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "orders.html", {
         "admin": request.session.get("admin"),
         "orders": orders,
         "filter": status,

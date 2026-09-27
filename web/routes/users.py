@@ -21,7 +21,7 @@ async def users_list(request: Request, search: str = ""):
     else:
         users = await fetch_all("SELECT * FROM users ORDER BY created_at DESC LIMIT 100")
     
-    return templates.TemplateResponse("users.html", {
+    return templates.TemplateResponse(request, "users.html", {
         "request": request,
         "admin": request.session.get("admin"),
         "users": users,

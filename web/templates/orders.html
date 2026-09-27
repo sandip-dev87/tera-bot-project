@@ -16,15 +16,15 @@
     <div class="flex justify-between items-start mb-2">
         <div>
             <div class="font-bold">Order #{{ o[0] }}</div>
-            <div class="text-sm text-gray-600">User: {{ o[1] }} | Deposit: ₹{{ "%.0f"|format(o[5]) }} | Structure: {{ o[6] }}</div>
-            <div class="text-sm text-gray-600">UID: {{ o[8] or '-' }} | Withdrawal: ₹{{ "%.0f"|format(o[9] or 0) }}</div>
-            <div class="text-sm text-gray-600">Status: <b>{{ o[12] }}</b></div>
-            {% if o[13] %}<div class="text-sm text-red-600">Reason: {{ o[13] }}</div>{% endif %}
+            <div class="text-sm text-gray-600">User: {{ o[1] }} | Deposit: ₹{{ "%.0f"|format(o[4] or 0) }} | Structure: {{ o[5] or '-' }}</div>
+            <div class="text-sm text-gray-600">UID: {{ o[7] or '-' }} | Withdrawal: ₹{{ "%.0f"|format(o[8] or 0) }}</div>
+            <div class="text-sm text-gray-600">Status: <b>{{ o[13] }}</b></div>
+            {% if o[14] %}<div class="text-sm text-red-600">Reason: {{ o[14] }}</div>{% endif %}
         </div>
         <div class="text-xs text-gray-500">{{ o[16] }}</div>
     </div>
-    
-    {% if o[12] == 'under_processing' %}
+
+    {% if o[13] == 'under_processing' %}
     <div class="flex gap-2 mt-2">
         <form method="post" action="/orders/{{ o[0] }}/approve" class="flex gap-2">
             <input type="number" name="reward" placeholder="Reward ₹" required class="p-1 border rounded text-sm w-24">

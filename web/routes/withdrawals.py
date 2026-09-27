@@ -18,7 +18,7 @@ async def withdrawals_list(request: Request, status: str = "pending"):
         [status]
     )
     
-    return templates.TemplateResponse("withdrawals.html", {
+    return templates.TemplateResponse(request, "withdrawals.html", {
         "request": request,
         "admin": request.session.get("admin"),
         "withdrawals": withdrawals,

@@ -16,7 +16,7 @@ async def urls_list(request: Request):
     urls = await fetch_all("SELECT * FROM working_urls ORDER BY id DESC")
     all_amounts = await fetch_all("SELECT * FROM deposit_amounts ORDER BY id")
     
-    return templates.TemplateResponse("urls.html", {
+    return templates.TemplateResponse(request, "urls.html", {
         "request": request,
         "admin": request.session.get("admin"),
         "urls": urls,
@@ -100,7 +100,7 @@ async def url_analytics(request: Request, url_id: int):
     
     recent = await fetch_all("SELECT * FROM orders WHERE url_id = ? ORDER BY id DESC LIMIT 20", [url_id])
     
-    return templates.TemplateResponse("url_analytics.html", {
+    return templates.TemplateResponse(request, "url_analytics.html", {
         "request": request,
         "admin": request.session.get("admin"),
         "url": url,

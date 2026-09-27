@@ -11,7 +11,7 @@ templates = Jinja2Templates(directory="web/templates")
 
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(request, "login.html", {"request": request})
 
 
 @router.post("/login")
@@ -20,7 +20,7 @@ async def login_submit(request: Request, username: str = Form(...), password: st
     
     admin = await authenticate(username, password)
     if not admin:
-        return templates.TemplateResponse("login.html", {
+        return templates.TemplateResponse(request, "login.html", {
             "request": request,
             "error": "Galat username ya password"
         })
@@ -42,7 +42,7 @@ async def admins_list(request: Request):
     
     admins = await fetch_all("SELECT id, username, phone, role, created_at FROM admins ORDER BY id")
     
-    return templates.TemplateResponse("admins.html", {
+    return templates.TemplateResponse(request, "admins.html", {
         "request": request,
         "admin": request.session.get("admin"),
         "admins": admins,

@@ -17,7 +17,7 @@ async def referral_page(request: Request):
         "SELECT r.*, u.name as referrer_name FROM referrals r JOIN users u ON u.acc_no = r.referrer_acc ORDER BY r.id DESC LIMIT 100"
     )
     
-    return templates.TemplateResponse("referral.html", {
+    return templates.TemplateResponse(request, "referral.html", {
         "request": request,
         "admin": request.session.get("admin"),
         "referrals": referrals,

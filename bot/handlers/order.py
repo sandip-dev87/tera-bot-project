@@ -1,7 +1,8 @@
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
 from aiogram.fsm.context import FSMContext
 from bot.states import OrderFlow
+from bot.config import ORDER_CHANNEL_ID
 from shared.db import fetch_one, fetch_all, execute
 from shared.settings import get_order_timeout, get_browser_message, is_membership_required
 from bot.keyboards.main_menu import membership_button
@@ -81,7 +82,30 @@ async def order_proof(msg: Message, state: FSMContext):
     timeout = await get_order_timeout()
     user = await fetch_one("SELECT acc_no FROM users WHERE tg_id = ?", [msg.from_user.id])
     acc_no = user[0]
-    await execute("INSERT INTO orders (user_acc, url_id, deposit_amount_id, deposit_amount, deposit_structure, working_url, uid, withdrawal_amount, proof_file_ids, proof_type, status, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'photo', 'created', DATETIME('now', '+' || ? || ' minutes'))", [acc_no, data["url_id"], data["deposit_id"], data["deposit_amount"], data["deposit_structure"], data["url"], data["uid"], data["withdrawal"], file_id, timeout])
+    
+    # Order banane se pehle channel mein bhej
+    caption = (
+        f"📦 Order Proof\n"
+        f"👤 User: {acc_no}\n"
+        f"💰 Deposit: ₹{data['deposit_amount']:.0f}\n"
+        f"📋 Structure: {data['deposit_structure']}\n"
+        f"🔗 URL: {data['url']}\n"
+        f"🔢 UID: {data['uid']}\n"
+        f"💸 Withdrawal: ₹{data['withdrawal']:.0f}\n"
+        f"⏰ {msg.date}"
+    )
+    
+    try:
+        sent = await msg.bot.send_photo(ORDER_CHANNEL_ID, file_id, caption=caption)
+        proof_msg_id = sent.message_id
+    except Exception as e:
+        print(f"Channel send error: {e}")
+        proof_msg_id = None
+    
+    await execute(
+        "INSERT INTO orders (user_acc, url_id, deposit_amount_id, deposit_amount, deposit_structure, working_url, uid, withdrawal_amount, proof_file_ids, proof_message_id, proof_type, status, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'photo', 'created', DATETIME('now', '+' || ? || ' minutes'))",
+        [acc_no, data["url_id"], data["deposit_id"], data["deposit_amount"], data["deposit_structure"], data["url"], data["uid"], data["withdrawal"], file_id, proof_msg_id, timeout]
+    )
     order = await fetch_one("SELECT last_insert_rowid()")
     order_id = order[0]
     await state.clear()

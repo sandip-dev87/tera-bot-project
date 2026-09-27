@@ -16,7 +16,7 @@ async def settings_page(request: Request):
     
     settings = await get_all_settings()
     
-    return templates.TemplateResponse("settings.html", {
+    return templates.TemplateResponse(request, "settings.html", {
         "request": request,
         "admin": request.session.get("admin"),
         "settings": settings,

@@ -17,7 +17,7 @@ async def membership_page(request: Request):
     plans = await fetch_all("SELECT * FROM membership_plans ORDER BY id")
     requests = await fetch_all("SELECT * FROM memberships WHERE status = 'pending' ORDER BY id DESC LIMIT 50")
     
-    return templates.TemplateResponse("membership.html", {
+    return templates.TemplateResponse(request, "membership.html", {
         "request": request,
         "admin": request.session.get("admin"),
         "plans": plans,
