@@ -3,7 +3,7 @@
 {% block content %}
 <h1 class="text-2xl font-bold mb-4">📦 Orders</h1>
 
-<div class="mb-4 flex gap-2">
+<div class="mb-4 flex gap-2 flex-wrap">
     <a href="/orders?status=all" class="px-3 py-1 rounded {% if filter=='all' %}bg-blue-600 text-white{% else %}bg-white{% endif %}">All</a>
     <a href="/orders?status=created" class="px-3 py-1 rounded {% if filter=='created' %}bg-blue-600 text-white{% else %}bg-white{% endif %}">Created</a>
     <a href="/orders?status=under_processing" class="px-3 py-1 rounded {% if filter=='under_processing' %}bg-blue-600 text-white{% else %}bg-white{% endif %}">Processing</a>
@@ -12,30 +12,89 @@
 </div>
 
 {% for o in orders %}
-<div class="bg-white p-4 rounded shadow mb-3">
-    <div class="flex justify-between items-start mb-2">
-        <div>
-            <div class="font-bold">Order #{{ o[0] }}</div>
-            <div class="text-sm text-gray-600">User: {{ o[1] }} | Deposit: ₹{{ "%.0f"|format(o[4] or 0) }} | Structure: {{ o[5] or '-' }}</div>
-            <div class="text-sm text-gray-600">UID: {{ o[7] or '-' }} | Withdrawal: ₹{{ "%.0f"|format(o[8] or 0) }}</div>
-            <div class="text-sm text-gray-600">Status: <b>{{ o[13] }}</b></div>
-            {% if o[14] %}<div class="text-sm text-red-600">Reason: {{ o[14] }}</div>{% endif %}
+<div class="bg-white rounded shadow mb-4 overflow-hidden">
+    <!-- Header -->
+    <div class="bg-gray-800 text-white px-4 py-2 flex justify-between items-center">
+        <div class="font-bold text-lg">📦 Order #{{ o[0] }}</div>
+        <div class="text-sm px-2 py-1 rounded
+            {% if o[13] == 'completed' %}bg-green-600
+            {% elif o[13] == 'failed' %}bg-red-600
+            {% elif o[13] == 'under_processing' %}bg-yellow-600
+            {% else %}bg-gray-600{% endif %}">
+            {{ o[13] }}
         </div>
-        <div class="text-xs text-gray-500">{{ o[16] }}</div>
     </div>
 
-    {% if o[13] == 'under_processing' %}
-    <div class="flex gap-2 mt-2">
-        <form method="post" action="/orders/{{ o[0] }}/approve" class="flex gap-2">
-            <input type="number" name="reward" placeholder="Reward ₹" required class="p-1 border rounded text-sm w-24">
-            <button class="bg-green-600 text-white px-3 py-1 rounded text-sm">✅ Approve</button>
-        </form>
-        <form method="post" action="/orders/{{ o[0] }}/fail" class="flex gap-2">
-            <input type="text" name="reason" placeholder="Reason" required class="p-1 border rounded text-sm w-40">
-            <button class="bg-red-600 text-white px-3 py-1 rounded text-sm">❌ Fail</button>
-        </form>
+    <!-- Details -->
+    <div class="p-4">
+        <div class="grid grid-cols-2 gap-2 text-sm mb-3">
+            <div><span class="text-gray-500">👤 User:</span> <b>{{ o[1] }}</b></div>
+            <div><span class="text-gray-500">💰 Deposit:</span> <b>₹{{ "%.0f"|format(o[4] or 0) }}</b></div>
+            <div><span class="text-gray-500">📋 Structure:</span> <b>{{ o[5] or '-' }}</b></div>
+            <div><span class="text-gray-500">🔢 UID:</span> <b>{{ o[7] or '-' }}</b></div>
+            <div><span class="text-gray-500">💸 Withdrawal:</span> <b>₹{{ "%.0f"|format(o[8] or 0) }}</b></div>
+            <div><span class="text-gray-500">⏰ Created:</span> {{ o[16] }}</div>
+        </div>
+
+        <!-- Working URL -->
+        {% if o[6] %}
+        <div class="bg-blue-50 p-2 rounded mb-3 text-sm">
+            <span class="text-gray-600">🔗 Working URL:</span>
+            <code class="text-xs break-all">{{ o[6] }}</code>
+            <button onclick="navigator.clipboard.writeText('{{ o[6] }}'); this.textContent='✅ Copied!'; setTimeout(()=>this.textContent='📋 Copy', 1500)" class="ml-2 bg-blue-600 text-white px-2 py-1 rounded text-xs">📋 Copy</button>
+        </div>
+        {% endif %}
+
+        <!-- Proofs -->
+        {% if o[9] %}
+        <div class="mb-3">
+            <div class="text-sm font-bold mb-2">📸 Proofs:</div>
+            <div class="flex gap-2 flex-wrap">
+                <div class="text-center">
+                    <img src="/proof/{{ o[0] }}/0" class="w-32 h-32 object-cover rounded border cursor-pointer hover:opacity-80" onclick="window.open(this.src)">
+                    <div class="text-xs">Deposit</div>
+                </div>
+                <div class="text-center">
+                    <img src="/proof/{{ o[0] }}/1" class="w-32 h-32 object-cover rounded border cursor-pointer hover:opacity-80" onclick="window.open(this.src)">
+                    <div class="text-xs">Withdrawal</div>
+                </div>
+                <div class="text-center">
+                    <img src="/proof/{{ o[0] }}/2" class="w-32 h-32 object-cover rounded border cursor-pointer hover:opacity-80" onclick="window.open(this.src)">
+                    <div class="text-xs">Game Stats</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if o[14] %}
+        <div class="bg-red-50 p-2 rounded mb-3 text-sm">
+            <span class="text-red-600">❌ Reason:</span> {{ o[14] }}
+        </div>
+        {% endif %}
+
+        {% if o[15] %}
+        <div class="bg-green-50 p-2 rounded mb-3 text-sm">
+            <span class="text-green-600">💰 Reward:</span> ₹{{ "%.0f"|format(o[15]) }}
+        </div>
+        {% endif %}
+
+        <!-- Actions -->
+        {% if o[13] == 'under_processing' or o[13] == 'created' %}
+        <div class="border-t pt-3 mt-3">
+            <div class="font-bold mb-2 text-sm">⚡ Action:</div>
+            <div class="flex gap-3 flex-wrap">
+                <form method="post" action="/orders/{{ o[0] }}/approve" class="flex gap-2 items-center">
+                    <input type="number" name="reward" placeholder="Reward ₹" required class="p-2 border rounded text-sm w-32">
+                    <button class="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">✅ Approve</button>
+                </form>
+                <form method="post" action="/orders/{{ o[0] }}/fail" class="flex gap-2 items-center">
+                    <input type="text" name="reason" placeholder="Fail reason" required class="p-2 border rounded text-sm w-40">
+                    <button class="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700">❌ Fail</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
 {% endfor %}
 {% endblock %}
