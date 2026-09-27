@@ -11,7 +11,6 @@ import asyncio
 
 router = Router()
 
-# Media group cache (memory mein)
 media_cache = {}
 
 
@@ -90,22 +89,17 @@ async def order_withdrawal(msg: Message, state: FSMContext):
 
 @router.message(OrderFlow.proof1, F.photo)
 async def order_proofs(msg: Message, state: FSMContext):
-    """Photos collect karo - album ya single"""
-    
     if msg.media_group_id:
-        # Album hai - cache mein add karo
         gid = msg.media_group_id
         
         if gid not in media_cache:
             media_cache[gid] = {
                 "file_ids": [],
                 "user_id": msg.from_user.id,
-                "timer": None
             }
         
         media_cache[gid]["file_ids"].append(msg.photo[-1].file_id)
         
-        # Pehla photo aaya - 3 sec baad process karo
         if len(media_cache[gid]["file_ids"]) == 1:
             async def process_album(gid=gid, msg=msg, state=state):
                 await asyncio.sleep(3)
@@ -115,21 +109,29 @@ async def order_proofs(msg: Message, state: FSMContext):
                 file_ids = cache["file_ids"]
                 await save_order_with_photos(msg, state, file_ids)
             
-            media_cache[gid]["timer"] = asyncio.create_task(process_album())
+            asyncio.create_task(process_album())
     else:
-        # Single photo
         await save_order_with_photos(msg, state, [msg.photo[-1].file_id])
 
 
 async def save_order_with_photos(msg: Message, state: FSMContext, file_ids: list):
-    """Order save karo photos ke saath"""
+    """Order pehle save, phir album bhejo caption ke saath"""
     data = await state.get_data()
     timeout = await get_order_timeout()
     user = await fetch_one("SELECT acc_no FROM users WHERE tg_id = ?", [msg.from_user.id])
     acc_no = user[0]
     
+    # 1. ORDER PEHLE SAVE KARO (bina proof ke)
+    await execute(
+        "INSERT INTO orders (user_acc, url_id, deposit_amount_id, deposit_amount, deposit_structure, working_url, uid, withdrawal_amount, proof_file_ids, proof_type, status, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'photo', 'created', DATETIME('now', '+' || ? || ' minutes'))",
+        [acc_no, data["url_id"], data["deposit_id"], data["deposit_amount"], data["deposit_structure"], data["url"], data["uid"], data["withdrawal"], json.dumps(file_ids), timeout]
+    )
+    order = await fetch_one("SELECT last_insert_rowid()")
+    order_id = order[0]
+    
+    # 2. AB CAPTION BANAO (Order ID ke saath)
     caption = (
-        f"📦 Order Proof\n"
+        f"📦 Order #{order_id}\n"
         f"👤 User: {acc_no}\n"
         f"💰 Deposit: ₹{data['deposit_amount']:.0f}\n"
         f"📋 Structure: {data['deposit_structure']}\n"
@@ -138,7 +140,7 @@ async def save_order_with_photos(msg: Message, state: FSMContext, file_ids: list
         f"💸 Withdrawal: ₹{data['withdrawal']:.0f}"
     )
     
-    # Channel mein album bhejo (agar 2+ photos hain)
+    # 3. CHANNEL MEIN ALBUM BHEJO
     proof_msg_id = None
     try:
         if len(file_ids) >= 2:
@@ -152,13 +154,10 @@ async def save_order_with_photos(msg: Message, state: FSMContext, file_ids: list
     except Exception as e:
         print(f"Channel send error: {e}")
     
-    proof_file_ids = json.dumps(file_ids)
+    # 4. UPDATE ORDER with proof_msg_id
+    if proof_msg_id:
+        await execute("UPDATE orders SET proof_message_id = ?, proof_caption = ? WHERE id = ?",
+                      [proof_msg_id, caption, order_id])
     
-    await execute(
-        "INSERT INTO orders (user_acc, url_id, deposit_amount_id, deposit_amount, deposit_structure, working_url, uid, withdrawal_amount, proof_file_ids, proof_message_id, proof_caption, proof_type, status, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'photo', 'created', DATETIME('now', '+' || ? || ' minutes'))",
-        [acc_no, data["url_id"], data["deposit_id"], data["deposit_amount"], data["deposit_structure"], data["url"], data["uid"], data["withdrawal"], proof_file_ids, proof_msg_id, caption, timeout]
-    )
-    order = await fetch_one("SELECT last_insert_rowid()")
-    order_id = order[0]
     await state.clear()
     await msg.answer(f"✅ Order Submit Ho Gaya!\n\n📦 Order ID: #{order_id}\nPhotos: {len(file_ids)}\nStatus: Under Processing\n\nAdmin verify karega. {timeout} min tak wait karo.")
