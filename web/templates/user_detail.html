@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}User Analytics{% endblock %}
+{% block content %}
+<a href="/users" class="text-blue-600 text-sm mb-3 inline-block">← Back to Users</a>
+
+<div class="bg-white rounded shadow mb-4 p-4">
+    <div class="flex justify-between items-start flex-wrap gap-3">
+        <div>
+            <h1 class="text-2xl font-bold">👤 {{ user[0] }} - {{ user[2] }}</h1>
+            <div class="text-sm text-gray-600">📱 {{ user[3] }}</div>
+            <div class="text-sm text-gray-600">📅 Joined: {{ user[16] }}</div>
+        </div>
+        <div class="text-right">
+            <div class="text-3xl font-bold text-green-600">₹{{ "%.0f"|format(user[5]) }}</div>
+            <div class="text-sm text-gray-500">Current Balance</div>
+            {% if user[6] %}
+            <div class="text-sm text-red-600 font-bold mt-1">🚫 BANNED: {{ user[7] }}</div>
+            {% else %}
+            <div class="text-sm text-green-600 font-bold mt-1">✅ Active</div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="mt-3 flex gap-2 flex-wrap">
+        {% if user[11] and user[12] %}
+        <div class="bg-green-100 text-green-700 px-3 py-1 rounded text-sm">
+            🎫 Membership: Expires {{ user[12] }}
+        </div>
+        {% else %}
+        <div class="bg-gray-100 text-gray-600 px-3 py-1 rounded text-sm">
+            🎫 No Membership
+        </div>
+        {% endif %}
+        
+        {% if user[10] %}
+        <div class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm">
+            👥 Referred by: {{ user[10] }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="bg-white rounded shadow mb-4 p-4">
+    <h2 class="font-bold text-lg mb-3">📊 Order Statistics</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="bg-gray-50 p-3 rounded">
+            <div class="text-gray-500 text-xs">Total Orders</div>
+            <div class="text-2xl font-bold">{{ order_stats[0] or 0 }}</div>
+        </div>
+        <div class="bg-green-50 p-3 rounded">
+            <div class="text-green-600 text-xs">✅ Completed</div>
+            <div class="text-2xl font-bold text-green-600">{{ order_stats[1] or 0 }}</div>
+        </div>
+        <div class="bg-yellow-50 p-3 rounded">
+            <div class="text-yellow-600 text-xs">⏳ Processing</div>
+            <div class="text-2xl font-bold text-yellow-600">{{ order_stats[2] or 0 }}</div>
+        </div>
+        <div class="bg-red-50 p-3 rounded">
+            <div class="text-red-600 text-xs">❌ Failed</div>
+            <div class="text-2xl font-bold text-red-600">{{ order_stats[4] or 0 }}</div>
+        </div>
+    </div>
+    <div class="grid grid-cols-2 gap-3 mt-3">
+        <div class="bg-blue-50 p-3 rounded">
+            <div class="text-blue-600 text-xs">Total Deposit</div>
+            <div class="text-xl font-bold">₹{{ "%.0f"|format(order_stats[6] or 0) }}</div>
+        </div>
+        <div class="bg-purple-50 p-3 rounded">
+            <div class="text-purple-600 text-xs">Total Reward Given</div>
+            <div class="text-xl font-bold">₹{{ "%.0f"|format(order_stats[5] or 0) }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white rounded shadow mb-4 p-4">
+    <h2 class="font-bold text-lg mb-3">💸 Withdrawal Statistics</h2>
+    <div class="grid grid-cols-3 gap-3">
+        <div class="bg-gray-50 p-3 rounded">
+            <div class="text-gray-500 text-xs">Total Requests</div>
+            <div class="text-2xl font-bold">{{ wd_stats[0] or 0 }}</div>
+        </div>
+        <div class="bg-green-50 p-3 rounded">
+            <div class="text-green-600 text-xs">Approved Amount</div>
+            <div class="text-xl font-bold text-green-600">₹{{ "%.0f"|format(wd_stats[1] or 0) }}</div>
+        </div>
+        <div class="bg-yellow-50 p-3 rounded">
+            <div class="text-yellow-600 text-xs">Pending Amount</div>
+            <div class="text-xl font-bold text-yellow-600">₹{{ "%.0f"|format(wd_stats[2] or 0) }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white rounded shadow mb-4 p-4">
+    <h2 class="font-bold text-lg mb-3">👥 Referrals ({{ referrals|length }})</h2>
+    {% if referrals %}
+    <table class="w-full text-sm">
+        <tr class="border-b bg-gray-50">
+            <th class="text-left p-2">Acc No</th>
+            <th class="text-left p-2">Name</th>
+            <th class="text-left p-2">Commission</th>
+            <th class="text-left p-2">Joined</th>
+        </tr>
+        {% for r in referrals %}
+        <tr class="border-b">
+            <td class="p-2"><a href="/users/{{ r[0] }}" class="text-blue-600">{{ r[0] }}</a></td>
+            <td class="p-2">{{ r[2] or '-' }}</td>
+            <td class="p-2 text-green-600 font-bold">₹{{ "%.0f"|format(r[1] or 0) }}</td>
+            <td class="p-2 text-xs">{{ r[3] or '-' }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <div class="text-gray-500 text-sm">Koi referral nahi.</div>
+    {% endif %}
+</div>
+
+<div class="bg-white rounded shadow mb-4 p-4">
+    <h2 class="font-bold text-lg mb-3">📦 Recent Orders</h2>
+    {% if recent_orders %}
+    <table class="w-full text-sm">
+        <tr class="border-b bg-gray-50">
+            <th class="text-left p-2">ID</th>
+            <th class="text-left p-2">Deposit</th>
+            <th class="text-left p-2">Status</th>
+            <th class="text-left p-2">Reward</th>
+            <th class="text-left p-2">Date</th>
+        </tr>
+        {% for o in recent_orders %}
+        <tr class="border-b">
+            <td class="p-2"><a href="/orders?search={{ o[0] }}" class="text-blue-600">#{{ o[0] }}</a></td>
+            <td class="p-2">₹{{ "%.0f"|format(o[1] or 0) }}</td>
+            <td class="p-2">{{ o[2] }}</td>
+            <td class="p-2">{% if o[3] %}₹{{ "%.0f"|format(o[3]) }}{% else %}-{% endif %}</td>
+            <td class="p-2 text-xs">{{ o[4] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <div class="text-gray-500 text-sm">Koi order nahi.</div>
+    {% endif %}
+</div>
+
+<div class="bg-white rounded shadow mb-4 p-4">
+    <h2 class="font-bold text-lg mb-3">💰 Recent Transactions</h2>
+    {% if transactions %}
+    {% for t in transactions %}
+    <div class="flex justify-between py-1 border-b text-sm">
+        <div>
+            <span class="font-bold">{{ t[0] }}</span>
+            <span class="text-gray-500 ml-2">{{ t[2] or '' }}</span>
+        </div>
+        <div class="{% if t[1] > 0 %}text-green-600{% else %}text-red-600{% endif %} font-bold">
+            ₹{{ "%.0f"|format(t[1]) }}
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="text-gray-500 text-sm">Koi transaction nahi.</div>
+    {% endif %}
+</div>
+
+<div class="bg-white rounded shadow p-4">
+    <h2 class="font-bold text-lg mb-3">⚡ Actions</h2>
+    <div class="flex gap-3 flex-wrap">
+        <form method="post" action="/users/{{ user[0] }}/balance" class="flex gap-1">
+            <input type="number" name="amount" placeholder="±₹" required class="p-2 border rounded text-sm w-24">
+            <input type="text" name="note" placeholder="Note" class="p-2 border rounded text-sm w-32">
+            <button class="bg-blue-600 text-white px-3 py-2 rounded text-sm">💰 Balance Adjust</button>
+        </form>
+        
+        {% if user[6] %}
+        <form method="post" action="/users/{{ user[0] }}/unban">
+            <button class="bg-green-600 text-white px-4 py-2 rounded text-sm">✅ Unban</button>
+        </form>
+        {% else %}
+        <form method="post" action="/users/{{ user[0] }}/ban" class="flex gap-1">
+            <input type="text" name="reason" placeholder="Ban reason" required class="p-2 border rounded text-sm w-32">
+            <button class="bg-red-600 text-white px-3 py-2 rounded text-sm">🚫 Ban</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
