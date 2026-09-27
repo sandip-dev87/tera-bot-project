@@ -12,11 +12,23 @@ templates = Jinja2Templates(directory="web/templates")
 
 
 @router.get("/orders", response_class=HTMLResponse)
-async def orders_list(request: Request, status: str = "all"):
+async def orders_list(request: Request, status: str = "all", search: str = ""):
     if not is_logged_in(request):
         return RedirectResponse("/login")
     
-    if status == "all":
+    if search:
+        # Search by order ID (if numeric), user acc_no, or URL
+        if search.isdigit():
+            orders = await fetch_all(
+                "SELECT * FROM orders WHERE id = ? OR user_acc LIKE ? OR working_url LIKE ? ORDER BY id DESC LIMIT 100",
+                [int(search), f"%{search}%", f"%{search}%"]
+            )
+        else:
+            orders = await fetch_all(
+                "SELECT * FROM orders WHERE user_acc LIKE ? OR working_url LIKE ? ORDER BY id DESC LIMIT 100",
+                [f"%{search}%", f"%{search}%"]
+            )
+    elif status == "all":
         orders = await fetch_all("SELECT * FROM orders ORDER BY id DESC LIMIT 100")
     else:
         orders = await fetch_all("SELECT * FROM orders WHERE status = ? ORDER BY id DESC LIMIT 100", [status])
@@ -25,12 +37,12 @@ async def orders_list(request: Request, status: str = "all"):
         "admin": request.session.get("admin"),
         "orders": orders,
         "filter": status,
+        "search": search,
     })
 
 
 @router.get("/proof/{order_id}/{index}")
 async def get_proof(order_id: int, index: int):
-    """Telegram se proof image proxy karo - single ya multi handle"""
     order = await fetch_one("SELECT proof_file_ids FROM orders WHERE id = ?", [order_id])
     if not order or not order[0]:
         return Response("No proof", status_code=404)
@@ -38,7 +50,6 @@ async def get_proof(order_id: int, index: int):
     raw = order[0]
     file_id = None
     
-    # JSON array try karo
     try:
         ids = json.loads(raw)
         if isinstance(ids, list) and len(ids) > index:
@@ -46,7 +57,6 @@ async def get_proof(order_id: int, index: int):
         elif isinstance(ids, str):
             file_id = ids
     except (json.JSONDecodeError, TypeError):
-        # Plain string hai
         file_id = raw
     
     if not file_id:
