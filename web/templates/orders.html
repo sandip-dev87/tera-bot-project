@@ -3,7 +3,6 @@
 {% block content %}
 <h1 class="text-2xl font-bold mb-4">📦 Orders</h1>
 
-<!-- Search -->
 <form method="get" action="/orders" class="mb-4 flex gap-2">
     <input type="text" name="search" value="{{ search }}" 
         placeholder="🔍 Order ID / User Acc / URL" 
@@ -20,7 +19,6 @@
 </div>
 {% endif %}
 
-<!-- Filter -->
 <div class="mb-4 flex gap-2 flex-wrap">
     <a href="/orders?status=all" class="px-3 py-1 rounded {% if filter=='all' and not search %}bg-blue-600 text-white{% else %}bg-white{% endif %}">All</a>
     <a href="/orders?status=created" class="px-3 py-1 rounded {% if filter=='created' and not search %}bg-blue-600 text-white{% else %}bg-white{% endif %}">Created</a>
@@ -66,21 +64,28 @@
         </div>
         {% endif %}
 
+        <!-- PROOFS - BADE SIZE MEIN -->
         {% if o[9] %}
         <div class="mb-3">
-            <div class="text-sm font-bold mb-2">📸 Proofs:</div>
-            <div class="flex gap-2 flex-wrap">
+            <div class="text-sm font-bold mb-2">📸 Proofs (click karke full size dekho):</div>
+            <div class="grid grid-cols-3 gap-2">
                 <div class="text-center">
-                    <img src="/proof/{{ o[0] }}/0" class="w-32 h-32 object-cover rounded border cursor-pointer hover:opacity-80" onclick="window.open(this.src)">
-                    <div class="text-xs">Deposit</div>
+                    <img src="/proof/{{ o[0] }}/0" 
+                         class="w-full h-48 object-contain bg-gray-100 rounded border cursor-pointer hover:border-blue-500"
+                         onclick="openFullSize('/proof/{{ o[0] }}/0')">
+                    <div class="text-xs mt-1 font-bold">📥 Deposit</div>
                 </div>
                 <div class="text-center">
-                    <img src="/proof/{{ o[0] }}/1" class="w-32 h-32 object-cover rounded border cursor-pointer hover:opacity-80" onclick="window.open(this.src)">
-                    <div class="text-xs">Withdrawal</div>
+                    <img src="/proof/{{ o[0] }}/1" 
+                         class="w-full h-48 object-contain bg-gray-100 rounded border cursor-pointer hover:border-blue-500"
+                         onclick="openFullSize('/proof/{{ o[0] }}/1')">
+                    <div class="text-xs mt-1 font-bold">💸 Withdrawal</div>
                 </div>
                 <div class="text-center">
-                    <img src="/proof/{{ o[0] }}/2" class="w-32 h-32 object-cover rounded border cursor-pointer hover:opacity-80" onclick="window.open(this.src)">
-                    <div class="text-xs">Game Stats</div>
+                    <img src="/proof/{{ o[0] }}/2" 
+                         class="w-full h-48 object-contain bg-gray-100 rounded border cursor-pointer hover:border-blue-500"
+                         onclick="openFullSize('/proof/{{ o[0] }}/2')">
+                    <div class="text-xs mt-1 font-bold">🎮 Game Stats</div>
                 </div>
             </div>
         </div>
@@ -116,4 +121,20 @@
     </div>
 </div>
 {% endfor %}
+
+<!-- Full size modal -->
+<div id="fullModal" class="hidden fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4" onclick="closeFullSize()">
+    <img id="fullImage" src="" class="max-w-full max-h-full object-contain">
+    <button onclick="closeFullSize()" class="absolute top-4 right-4 text-white text-3xl font-bold">&times;</button>
+</div>
+
+<script>
+function openFullSize(src) {
+    document.getElementById('fullImage').src = src;
+    document.getElementById('fullModal').classList.remove('hidden');
+}
+function closeFullSize() {
+    document.getElementById('fullModal').classList.add('hidden');
+}
+</script>
 {% endblock %}
