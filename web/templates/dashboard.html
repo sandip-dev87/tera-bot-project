@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">📊 Dashboard</h1>
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white p-4 rounded shadow">
+        <div class="text-gray-500 text-sm">👥 Users</div>
+        <div class="text-2xl font-bold">{{ total_users }}</div>
+        <div class="text-xs text-green-600">Active: {{ active_members }}</div>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <div class="text-gray-500 text-sm">📦 Orders</div>
+        <div class="text-2xl font-bold">{{ total_orders }}</div>
+        <div class="text-xs">Pending: {{ pending_orders }} | Processing: {{ processing_orders }}</div>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <div class="text-gray-500 text-sm">💸 Withdrawals</div>
+        <div class="text-2xl font-bold">{{ pending_withdrawals_count }}</div>
+        <div class="text-xs">₹{{ "%.0f"|format(pending_withdrawals_amount) }}</div>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <div class="text-gray-500 text-sm">💰 Users Balance</div>
+        <div class="text-2xl font-bold">₹{{ "%.0f"|format(users_balance) }}</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="font-bold mb-3">📦 Order Status</h2>
+        <div class="space-y-2 text-sm">
+            <div class="flex justify-between"><span>Created:</span><span class="font-bold">{{ pending_orders }}</span></div>
+            <div class="flex justify-between"><span>Processing:</span><span class="font-bold">{{ processing_orders }}</span></div>
+            <div class="flex justify-between"><span>Completed:</span><span class="font-bold text-green-600">{{ completed_orders }}</span></div>
+            <div class="flex justify-between"><span>Failed:</span><span class="font-bold text-red-600">{{ failed_orders }}</span></div>
+        </div>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="font-bold mb-3">💵 Platform Earnings</h2>
+        <div class="space-y-2 text-sm">
+            <div class="flex justify-between"><span>Fees:</span><span class="font-bold">₹{{ "%.0f"|format(fees) }}</span></div>
+            <div class="flex justify-between"><span>Actual Cost:</span><span class="font-bold">₹{{ "%.0f"|format(cost) }}</span></div>
+            <div class="flex justify-between border-t pt-2"><span>Net Profit:</span><span class="font-bold text-green-600">₹{{ "%.0f"|format(profit) }}</span></div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white p-4 rounded shadow">
+    <h2 class="font-bold mb-3">🎫 Membership</h2>
+    <div class="flex gap-6 text-sm">
+        <div>Active: <b>{{ active_members }}</b></div>
+        <div>Pending: <b>{{ membership_pending }}</b></div>
+        <div>Revenue: <b>₹{{ "%.0f"|format(membership_revenue) }}</b></div>
+    </div>
+</div>
+{% endblock %}

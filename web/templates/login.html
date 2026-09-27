@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto mt-20 bg-white p-8 rounded shadow">
+    <h1 class="text-2xl font-bold mb-6 text-center">🔐 Admin Login</h1>
+    {% if error %}
+    <div class="bg-red-100 text-red-700 p-3 rounded mb-4">{{ error }}</div>
+    {% endif %}
+    <form method="post" action="/login">
+        <input type="text" name="username" placeholder="Username ya Phone" required
+            class="w-full p-3 border rounded mb-3">
+        <input type="password" name="password" placeholder="Password" required
+            class="w-full p-3 border rounded mb-4">
+        <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700">
+            Login
+        </button>
+    </form>
+</div>
+{% endblock %}

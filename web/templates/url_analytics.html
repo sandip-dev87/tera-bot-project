@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}URL Analytics{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">📊 URL Analytics - #{{ url[0] }}</h1>
+<div class="text-sm mb-4 break-all">{{ url[1] }}</div>
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white p-4 rounded shadow">
+        <div class="text-gray-500 text-sm">Total Orders</div>
+        <div class="text-2xl font-bold">{{ total }}</div>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <div class="text-gray-500 text-sm">Completed</div>
+        <div class="text-2xl font-bold text-green-600">{{ completed }}</div>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <div class="text-gray-500 text-sm">Processing</div>
+        <div class="text-2xl font-bold text-yellow-600">{{ processing }}</div>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <div class="text-gray-500 text-sm">Failed</div>
+        <div class="text-2xl font-bold text-red-600">{{ failed }}</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-2 gap-4 mb-6">
+    <div class="bg-white p-4 rounded shadow">
+        <div class="text-gray-500 text-sm">Total Deposit</div>
+        <div class="text-2xl font-bold">₹{{ "%.0f"|format(total_deposit) }}</div>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <div class="text-gray-500 text-sm">Total Reward</div>
+        <div class="text-2xl font-bold">₹{{ "%.0f"|format(total_reward) }}</div>
+    </div>
+</div>
+
+<div class="bg-white p-4 rounded shadow mb-6">
+    <h2 class="font-bold mb-3">💰 Deposit Amount Breakdown</h2>
+    <table class="w-full text-sm">
+        <tr class="border-b">
+            <th class="text-left p-2">Amount</th>
+            <th class="text-left p-2">Structure</th>
+            <th class="text-left p-2">Limit</th>
+            <th class="text-left p-2">Used</th>
+        </tr>
+        {% for a in amounts %}
+        <tr class="border-b">
+            <td class="p-2">₹{{ "%.0f"|format(a[2]) }}</td>
+            <td class="p-2">{{ a[3] }}</td>
+            <td class="p-2">{{ a[5] }}</td>
+            <td class="p-2">{{ a[4] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<div class="bg-white p-4 rounded shadow">
+    <h2 class="font-bold mb-3">📋 Recent Orders</h2>
+    {% for r in recent %}
+    <div class="text-sm py-1 border-b">
+        #{{ r[0] }} | {{ r[1] }} | ₹{{ "%.0f"|format(r[5]) }} | {{ r[12] }}
+        {% if r[14] %} | Reward: ₹{{ "%.0f"|format(r[14]) }}{% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

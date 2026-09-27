@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">👥 Users</h1>
+
+<form method="get" class="mb-4">
+    <input type="text" name="search" value="{{ search }}" placeholder="Search acc/mobile/name"
+        class="p-2 border rounded w-64">
+    <button class="bg-blue-600 text-white px-4 py-2 rounded">Search</button>
+</form>
+
+{% for u in users %}
+<div class="bg-white p-4 rounded shadow mb-2">
+    <div class="flex justify-between">
+        <div>
+            <div class="font-bold">{{ u[0] }} - {{ u[2] }}</div>
+            <div class="text-sm text-gray-600">Mobile: {{ u[3] }} | Balance: ₹{{ "%.0f"|format(u[5]) }}</div>
+            <div class="text-sm {% if u[6] %}text-red-600{% else %}text-green-600{% endif %}">
+                {% if u[6] %}BANNED: {{ u[7] }}{% else %}Active{% endif %}
+            </div>
+        </div>
+        <div class="flex gap-2 items-start">
+            <form method="post" action="/users/{{ u[0] }}/balance" class="flex gap-1">
+                <input type="number" name="amount" placeholder="±₹" class="p-1 border rounded text-sm w-20">
+                <input type="text" name="note" placeholder="Note" class="p-1 border rounded text-sm w-24">
+                <button class="bg-blue-600 text-white px-2 py-1 rounded text-sm">Adjust</button>
+            </form>
+            {% if u[6] %}
+            <form method="post" action="/users/{{ u[0] }}/unban">
+                <button class="bg-green-600 text-white px-2 py-1 rounded text-sm">Unban</button>
+            </form>
+            {% else %}
+            <form method="post" action="/users/{{ u[0] }}/ban" class="flex gap-1">
+                <input type="text" name="reason" placeholder="Reason" class="p-1 border rounded text-sm w-24">
+                <button class="bg-red-600 text-white px-2 py-1 rounded text-sm">Ban</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

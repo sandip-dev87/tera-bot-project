@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}URLs{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">🔗 Working URLs</h1>
+
+<div class="bg-white p-4 rounded shadow mb-4">
+    <form method="post" action="/urls/add" class="flex gap-2">
+        <input type="text" name="url" placeholder="https://example.com/abc" required class="p-2 border rounded flex-1">
+        <button class="bg-blue-600 text-white px-4 py-2 rounded">Add URL</button>
+    </form>
+</div>
+
+{% for u in urls %}
+<div class="bg-white p-4 rounded shadow mb-4">
+    <div class="flex justify-between items-center mb-2">
+        <div>
+            <div class="font-bold">URL #{{ u[0] }}</div>
+            <div class="text-sm break-all">{{ u[1] }}</div>
+            <div class="text-xs {% if u[2] %}text-green-600{% else %}text-red-600{% endif %}">
+                {% if u[2] %}Active{% else %}Inactive{% endif %}
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <a href="/urls/{{ u[0] }}/analytics" class="bg-purple-600 text-white px-3 py-1 rounded text-sm">📊 Analytics</a>
+            <form method="post" action="/urls/{{ u[0] }}/toggle">
+                <button class="bg-yellow-500 text-white px-3 py-1 rounded text-sm">Toggle</button>
+            </form>
+            <form method="post" action="/urls/{{ u[0] }}/delete">
+                <button class="bg-red-600 text-white px-3 py-1 rounded text-sm">Delete</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="ml-4 border-l-2 pl-4">
+        <div class="text-sm font-bold mb-2">Deposit Amounts</div>
+        {% for a in all_amounts if a[1] == u[0] %}
+        <div class="flex justify-between text-sm py-1">
+            <span>₹{{ "%.0f"|format(a[2]) }} — {{ a[3] }} | Limit: {{ a[5] }} | Used: {{ a[4] }}</span>
+            <form method="post" action="/urls/amounts/{{ a[0] }}/delete">
+                <button class="text-red-600 text-xs">Delete</button>
+            </form>
+        </div>
+        {% endfor %}
+        
+        <form method="post" action="/urls/{{ u[0] }}/amounts/add" class="flex gap-1 mt-2">
+            <input type="number" name="amount" placeholder="Amount" required class="p-1 border rounded text-sm w-20">
+            <input type="text" name="deposit_structure" placeholder="500+100" required class="p-1 border rounded text-sm w-28">
+            <input type="number" name="max_limit" placeholder="Limit" required class="p-1 border rounded text-sm w-20">
+            <button class="bg-green-600 text-white px-2 py-1 rounded text-sm">Add</button>
+        </form>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Withdrawals{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">💸 Withdrawals</h1>
+
+<div class="mb-4 flex gap-2">
+    <a href="/withdrawals?status=pending" class="px-3 py-1 rounded {% if filter=='pending' %}bg-blue-600 text-white{% else %}bg-white{% endif %}">Pending</a>
+    <a href="/withdrawals?status=approved" class="px-3 py-1 rounded {% if filter=='approved' %}bg-blue-600 text-white{% else %}bg-white{% endif %}">Approved</a>
+    <a href="/withdrawals?status=rejected" class="px-3 py-1 rounded {% if filter=='rejected' %}bg-blue-600 text-white{% else %}bg-white{% endif %}">Rejected</a>
+</div>
+
+{% for w in withdrawals %}
+<div class="bg-white p-4 rounded shadow mb-3">
+    <div class="font-bold">#{{ w[0] }} | {{ w[1] }}</div>
+    <div class="text-sm text-gray-600">Amount: ₹{{ "%.0f"|format(w[2]) }} | Fee: ₹{{ "%.0f"|format(w[3]) }} | Total: ₹{{ "%.0f"|format(w[6]) }}</div>
+    <div class="text-sm text-gray-600">Method: {{ w[7] }}</div>
+    {% if w[7] == 'crypto' %}
+    <div class="text-sm">Wallet: {{ w[8] }}</div>
+    {% elif w[7] == 'upi' %}
+    <div class="text-sm">UPI: {{ w[9] }} | Holder: {{ w[10] }}</div>
+    {% else %}
+    <div class="text-sm">Bank: {{ w[11] }} | Acc: {{ w[12] }} | IFSC: {{ w[13] }}</div>
+    {% endif %}
+    <div class="text-sm">Status: <b>{{ w[14] }}</b></div>
+    
+    {% if w[14] == 'pending' %}
+    <div class="flex gap-2 mt-2">
+        <form method="post" action="/withdrawals/{{ w[0] }}/approve" class="flex gap-1">
+            <input type="text" name="note" placeholder="Note" class="p-1 border rounded text-sm w-32">
+            <button class="bg-green-600 text-white px-3 py-1 rounded text-sm">✅ Approve</button>
+        </form>
+        <form method="post" action="/withdrawals/{{ w[0] }}/reject" class="flex gap-1">
+            <input type="text" name="reason" placeholder="Reason" required class="p-1 border rounded text-sm w-32">
+            <button class="bg-red-600 text-white px-3 py-1 rounded text-sm">❌ Reject</button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endfor %}
+{% endblock %}

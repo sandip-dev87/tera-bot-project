@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin Panel{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body class="bg-gray-100">
+    {% if admin %}
+    <nav class="bg-gray-900 text-white px-6 py-3 flex justify-between items-center">
+        <div class="flex gap-4 text-sm">
+            <a href="/dashboard" class="hover:text-blue-400">📊 Dashboard</a>
+            <a href="/orders" class="hover:text-blue-400">📦 Orders</a>
+            <a href="/users" class="hover:text-blue-400">👥 Users</a>
+            <a href="/withdrawals" class="hover:text-blue-400">💸 Withdrawals</a>
+            <a href="/membership" class="hover:text-blue-400">🎫 Membership</a>
+            <a href="/urls" class="hover:text-blue-400">🔗 URLs</a>
+            <a href="/referral" class="hover:text-blue-400">👥 Referral</a>
+            <a href="/settings" class="hover:text-blue-400">⚙️ Settings</a>
+            {% if admin.role == 'superadmin' %}
+            <a href="/admins" class="hover:text-blue-400">👤 Admins</a>
+            {% endif %}
+        </div>
+        <div class="text-sm">
+            {{ admin.username }} | <a href="/logout" class="text-red-400">Logout</a>
+        </div>
+    </nav>
+    {% endif %}
+    
+    <main class="p-6">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

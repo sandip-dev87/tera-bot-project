@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Orders{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">📦 Orders</h1>
+
+<div class="mb-4 flex gap-2">
+    <a href="/orders?status=all" class="px-3 py-1 rounded {% if filter=='all' %}bg-blue-600 text-white{% else %}bg-white{% endif %}">All</a>
+    <a href="/orders?status=created" class="px-3 py-1 rounded {% if filter=='created' %}bg-blue-600 text-white{% else %}bg-white{% endif %}">Created</a>
+    <a href="/orders?status=under_processing" class="px-3 py-1 rounded {% if filter=='under_processing' %}bg-blue-600 text-white{% else %}bg-white{% endif %}">Processing</a>
+    <a href="/orders?status=completed" class="px-3 py-1 rounded {% if filter=='completed' %}bg-blue-600 text-white{% else %}bg-white{% endif %}">Completed</a>
+    <a href="/orders?status=failed" class="px-3 py-1 rounded {% if filter=='failed' %}bg-blue-600 text-white{% else %}bg-white{% endif %}">Failed</a>
+</div>
+
+{% for o in orders %}
+<div class="bg-white p-4 rounded shadow mb-3">
+    <div class="flex justify-between items-start mb-2">
+        <div>
+            <div class="font-bold">Order #{{ o[0] }}</div>
+            <div class="text-sm text-gray-600">User: {{ o[1] }} | Deposit: ₹{{ "%.0f"|format(o[5]) }} | Structure: {{ o[6] }}</div>
+            <div class="text-sm text-gray-600">UID: {{ o[8] or '-' }} | Withdrawal: ₹{{ "%.0f"|format(o[9] or 0) }}</div>
+            <div class="text-sm text-gray-600">Status: <b>{{ o[12] }}</b></div>
+            {% if o[13] %}<div class="text-sm text-red-600">Reason: {{ o[13] }}</div>{% endif %}
+        </div>
+        <div class="text-xs text-gray-500">{{ o[16] }}</div>
+    </div>
+    
+    {% if o[12] == 'under_processing' %}
+    <div class="flex gap-2 mt-2">
+        <form method="post" action="/orders/{{ o[0] }}/approve" class="flex gap-2">
+            <input type="number" name="reward" placeholder="Reward ₹" required class="p-1 border rounded text-sm w-24">
+            <button class="bg-green-600 text-white px-3 py-1 rounded text-sm">✅ Approve</button>
+        </form>
+        <form method="post" action="/orders/{{ o[0] }}/fail" class="flex gap-2">
+            <input type="text" name="reason" placeholder="Reason" required class="p-1 border rounded text-sm w-40">
+            <button class="bg-red-600 text-white px-3 py-1 rounded text-sm">❌ Fail</button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endfor %}
+{% endblock %}

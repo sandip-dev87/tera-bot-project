@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Membership{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">🎫 Membership</h1>
+
+<div class="bg-white p-4 rounded shadow mb-6">
+    <h2 class="font-bold mb-3">➕ Add Plan</h2>
+    <form method="post" action="/membership/plans/add" class="grid grid-cols-2 gap-2">
+        <input type="text" name="name" placeholder="Plan name" required class="p-2 border rounded">
+        <input type="number" name="price" placeholder="Price ₹" required class="p-2 border rounded">
+        <input type="number" name="duration_days" placeholder="Duration (din)" required class="p-2 border rounded">
+        <input type="text" name="description" placeholder="Description" class="p-2 border rounded">
+        <select name="is_free" class="p-2 border rounded">
+            <option value="0">Paid</option>
+            <option value="1">Free (Auto Approve)</option>
+        </select>
+        <button class="bg-blue-600 text-white p-2 rounded">Add Plan</button>
+    </form>
+</div>
+
+<h2 class="font-bold mb-3">Plans</h2>
+{% for p in plans %}
+<div class="bg-white p-3 rounded shadow mb-2 flex justify-between items-center">
+    <div>
+        <div class="font-bold">{% if p[6]==1 %}🎁{% endif %} {{ p[1] }} - ₹{{ "%.0f"|format(p[2]) }} ({{ p[3] }} din)</div>
+        <div class="text-sm text-gray-600">{{ p[4] or '' }}</div>
+        <div class="text-xs {% if p[5] %}text-green-600{% else %}text-red-600{% endif %}">
+            {% if p[5] %}Active{% else %}Inactive{% endif %}
+        </div>
+    </div>
+    <div class="flex gap-2">
+        <form method="post" action="/membership/plans/{{ p[0] }}/toggle">
+            <button class="bg-yellow-500 text-white px-3 py-1 rounded text-sm">Toggle</button>
+        </form>
+        <form method="post" action="/membership/plans/{{ p[0] }}/delete">
+            <button class="bg-red-600 text-white px-3 py-1 rounded text-sm">Delete</button>
+        </form>
+    </div>
+</div>
+{% endfor %}
+
+<h2 class="font-bold mb-3 mt-6">Pending Requests</h2>
+{% for r in requests %}
+<div class="bg-white p-3 rounded shadow mb-2">
+    <div class="font-bold">{{ r[1] }} - {{ r[3] }}</div>
+    <div class="text-sm">Amount: ₹{{ "%.0f"|format(r[4]) }} | UTR: {{ r[6] }}</div>
+    <div class="flex gap-2 mt-2">
+        <form method="post" action="/membership/{{ r[0] }}/approve">
+            <button class="bg-green-600 text-white px-3 py-1 rounded text-sm">✅ Approve</button>
+        </form>
+        <form method="post" action="/membership/{{ r[0] }}/reject" class="flex gap-1">
+            <input type="text" name="reason" placeholder="Reason" required class="p-1 border rounded text-sm">
+            <button class="bg-red-600 text-white px-3 py-1 rounded text-sm">❌ Reject</button>
+        </form>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

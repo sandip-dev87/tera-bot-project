@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Referral{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">👥 Referral</h1>
+
+<div class="bg-white p-4 rounded shadow">
+    <table class="w-full text-sm">
+        <tr class="border-b">
+            <th class="text-left p-2">Referrer</th>
+            <th class="text-left p-2">Referred</th>
+            <th class="text-left p-2">Commission</th>
+            <th class="text-left p-2">Date</th>
+        </tr>
+        {% for r in referrals %}
+        <tr class="border-b">
+            <td class="p-2">{{ r[1] }} ({{ r[4] }})</td>
+            <td class="p-2">{{ r[2] }}</td>
+            <td class="p-2">₹{{ "%.0f"|format(r[3]) }}</td>
+            <td class="p-2 text-xs">{{ r[5] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}
