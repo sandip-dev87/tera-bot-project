@@ -4,20 +4,12 @@
 <h1 class="text-2xl font-bold mb-4">📦 Orders</h1>
 
 <form method="get" action="/orders" class="mb-4 flex gap-2">
-    <input type="text" name="search" value="{{ search }}" 
-        placeholder="🔍 Order ID / User Acc / URL" 
-        class="p-2 border rounded flex-1 max-w-md">
+    <input type="text" name="search" value="{{ search }}" placeholder="🔍 Order ID / User Acc / URL" class="p-2 border rounded flex-1 max-w-md">
     <button class="bg-blue-600 text-white px-4 py-2 rounded">Search</button>
     {% if search %}
     <a href="/orders" class="bg-gray-300 text-gray-800 px-4 py-2 rounded">Clear</a>
     {% endif %}
 </form>
-
-{% if search %}
-<div class="mb-3 text-sm text-gray-600">
-    Searching: <b>{{ search }}</b> | Found: <b>{{ orders|length }}</b> results
-</div>
-{% endif %}
 
 <div class="mb-4 flex gap-2 flex-wrap">
     <a href="/orders?status=all" class="px-3 py-1 rounded {% if filter=='all' and not search %}bg-blue-600 text-white{% else %}bg-white{% endif %}">All</a>
@@ -26,12 +18,6 @@
     <a href="/orders?status=completed" class="px-3 py-1 rounded {% if filter=='completed' and not search %}bg-blue-600 text-white{% else %}bg-white{% endif %}">Completed</a>
     <a href="/orders?status=failed" class="px-3 py-1 rounded {% if filter=='failed' and not search %}bg-blue-600 text-white{% else %}bg-white{% endif %}">Failed</a>
 </div>
-
-{% if not orders %}
-<div class="bg-white p-8 rounded shadow text-center text-gray-500">
-    Koi order nahi mila.
-</div>
-{% endif %}
 
 {% for o in orders %}
 <div class="bg-white rounded shadow mb-4 overflow-hidden">
@@ -49,10 +35,10 @@
     <div class="p-4">
         <div class="grid grid-cols-2 gap-2 text-sm mb-3">
             <div><span class="text-gray-500">👤 User:</span> <b>{{ o[1] }}</b></div>
-            <div><span class="text-gray-500">💰 Deposit:</span> <b>₹{{ "%.0f"|format(o[4] or 0) }}</b></div>
+            <div><span class="text-gray-500">💰 Deposit:</span> <b>{{ o[4]|safe_amount }}</b></div>
             <div><span class="text-gray-500">📋 Structure:</span> <b>{{ o[5] or '-' }}</b></div>
             <div><span class="text-gray-500">🔢 UID:</span> <b>{{ o[7] or '-' }}</b></div>
-            <div><span class="text-gray-500">💸 Withdrawal:</span> <b>₹{{ "%.0f"|format(o[8] or 0) }}</b></div>
+            <div><span class="text-gray-500">💸 Withdrawal:</span> <b>{{ o[8]|safe_amount }}</b></div>
             <div><span class="text-gray-500">⏰ Created:</span> {{ o[16] }}</div>
         </div>
 
@@ -60,31 +46,23 @@
         <div class="bg-blue-50 p-2 rounded mb-3 text-sm">
             <span class="text-gray-600">🔗 Working URL:</span>
             <code class="text-xs break-all">{{ o[6] }}</code>
-            <button onclick="navigator.clipboard.writeText('{{ o[6] }}'); this.textContent='✅ Copied!'; setTimeout(()=>this.textContent='📋 Copy', 1500)" class="ml-2 bg-blue-600 text-white px-2 py-1 rounded text-xs">📋 Copy</button>
         </div>
         {% endif %}
 
-        <!-- PROOFS - BADE SIZE MEIN -->
         {% if o[9] %}
         <div class="mb-3">
-            <div class="text-sm font-bold mb-2">📸 Proofs (click karke full size dekho):</div>
+            <div class="text-sm font-bold mb-2">📸 Proofs:</div>
             <div class="grid grid-cols-3 gap-2">
                 <div class="text-center">
-                    <img src="/proof/{{ o[0] }}/0" 
-                         class="w-full h-48 object-contain bg-gray-100 rounded border cursor-pointer hover:border-blue-500"
-                         onclick="openFullSize('/proof/{{ o[0] }}/0')">
+                    <img src="/proof/{{ o[0] }}/0" class="w-full h-48 object-contain bg-gray-100 rounded border cursor-pointer" onclick="window.open(this.src)">
                     <div class="text-xs mt-1 font-bold">📥 Deposit</div>
                 </div>
                 <div class="text-center">
-                    <img src="/proof/{{ o[0] }}/1" 
-                         class="w-full h-48 object-contain bg-gray-100 rounded border cursor-pointer hover:border-blue-500"
-                         onclick="openFullSize('/proof/{{ o[0] }}/1')">
+                    <img src="/proof/{{ o[0] }}/1" class="w-full h-48 object-contain bg-gray-100 rounded border cursor-pointer" onclick="window.open(this.src)">
                     <div class="text-xs mt-1 font-bold">💸 Withdrawal</div>
                 </div>
                 <div class="text-center">
-                    <img src="/proof/{{ o[0] }}/2" 
-                         class="w-full h-48 object-contain bg-gray-100 rounded border cursor-pointer hover:border-blue-500"
-                         onclick="openFullSize('/proof/{{ o[0] }}/2')">
+                    <img src="/proof/{{ o[0] }}/2" class="w-full h-48 object-contain bg-gray-100 rounded border cursor-pointer" onclick="window.open(this.src)">
                     <div class="text-xs mt-1 font-bold">🎮 Game Stats</div>
                 </div>
             </div>
@@ -99,42 +77,23 @@
 
         {% if o[15] %}
         <div class="bg-green-50 p-2 rounded mb-3 text-sm">
-            <span class="text-green-600">💰 Reward:</span> ₹{{ "%.0f"|format(o[15]) }}
+            <span class="text-green-600">💰 Reward:</span> {{ o[15]|safe_amount }}
         </div>
         {% endif %}
 
         {% if o[13] == 'under_processing' or o[13] == 'created' %}
-        <div class="border-t pt-3 mt-3">
-            <div class="font-bold mb-2 text-sm">⚡ Action:</div>
-            <div class="flex gap-3 flex-wrap">
-                <form method="post" action="/orders/{{ o[0] }}/approve" class="flex gap-2 items-center">
-                    <input type="number" name="reward" placeholder="Reward ₹" required class="p-2 border rounded text-sm w-32">
-                    <button class="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">✅ Approve</button>
-                </form>
-                <form method="post" action="/orders/{{ o[0] }}/fail" class="flex gap-2 items-center">
-                    <input type="text" name="reason" placeholder="Fail reason" required class="p-2 border rounded text-sm w-40">
-                    <button class="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700">❌ Fail</button>
-                </form>
-            </div>
+        <div class="border-t pt-3 mt-3 flex gap-3 flex-wrap">
+            <form method="post" action="/orders/{{ o[0] }}/approve" class="flex gap-2">
+                <input type="number" name="reward" placeholder="Reward ₹" required class="p-2 border rounded text-sm w-32">
+                <button class="bg-green-600 text-white px-4 py-2 rounded text-sm">✅ Approve</button>
+            </form>
+            <form method="post" action="/orders/{{ o[0] }}/fail" class="flex gap-2">
+                <input type="text" name="reason" placeholder="Fail reason" required class="p-2 border rounded text-sm w-40">
+                <button class="bg-red-600 text-white px-4 py-2 rounded text-sm">❌ Fail</button>
+            </form>
         </div>
         {% endif %}
     </div>
 </div>
 {% endfor %}
-
-<!-- Full size modal -->
-<div id="fullModal" class="hidden fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4" onclick="closeFullSize()">
-    <img id="fullImage" src="" class="max-w-full max-h-full object-contain">
-    <button onclick="closeFullSize()" class="absolute top-4 right-4 text-white text-3xl font-bold">&times;</button>
-</div>
-
-<script>
-function openFullSize(src) {
-    document.getElementById('fullImage').src = src;
-    document.getElementById('fullModal').classList.remove('hidden');
-}
-function closeFullSize() {
-    document.getElementById('fullModal').classList.add('hidden');
-}
-</script>
 {% endblock %}

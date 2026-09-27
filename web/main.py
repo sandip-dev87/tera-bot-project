@@ -12,16 +12,45 @@ from web.routes import dashboard, orders, users, withdrawals, membership, urls, 
 
 app = FastAPI(title="Admin Panel")
 
-# Session middleware
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "secret"))
-
-# Static files
 app.mount("/static", StaticFiles(directory="web/static"), name="static")
 
-# Templates
 templates = Jinja2Templates(directory="web/templates")
 
-# Routes
+
+def safe_amount(value):
+    """String ya number ko safe amount mein convert karo"""
+    try:
+        return f"₹{float(value):,.0f}"
+    except (ValueError, TypeError):
+        return f"₹{value}"
+
+
+def safe_num(value):
+    """String ya number ko safe number mein convert karo"""
+    try:
+        return f"{float(value):,.0f}"
+    except (ValueError, TypeError):
+        return str(value) if value else "0"
+
+
+templates.env.filters["safe_amount"] = safe_amount
+templates.env.filters["safe_num"] = safe_num
+
+# Baaki routes ko same templates use karne ke liye globally inject karo
+import web.routes.dashboard as dash_mod
+import web.routes.orders as orders_mod
+import web.routes.users as users_mod
+import web.routes.withdrawals as wd_mod
+import web.routes.membership as mem_mod
+import web.routes.urls as urls_mod
+import web.routes.referral as ref_mod
+import web.routes.settings as set_mod
+import web.routes.admins as adm_mod
+
+for mod in [dash_mod, orders_mod, users_mod, wd_mod, mem_mod, urls_mod, ref_mod, set_mod, adm_mod]:
+    mod.templates = templates
+
 app.include_router(dashboard.router)
 app.include_router(orders.router)
 app.include_router(users.router)
